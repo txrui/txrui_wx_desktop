@@ -1,0 +1,10 @@
+config.toml
+*.log
+__pycache__/
+txrui_shot_*.png
+txrui_debug_*.png
+build/
+dist/
+.pytest_cache/
+logs/
+self-test.json

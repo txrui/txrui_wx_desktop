@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Txrui · 控制面板</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="titlebar">
+  <div class="tb-left"><img class="logo" src="logo.png" alt="Txrui" width="38" height="38">
+    <div><div class="tb-name">Txrui</div><div class="tb-sub">微信截图 OCR · 控制面板</div></div>
+  </div>
+  <div class="tb-right">
+    <span class="pill" id="runPill"><span class="dot"></span><span id="runText">未启动</span></span>
+    <span class="mono" id="connLine"></span>
+  </div>
+</header>
+<nav class="tabs" id="tabs">
+  <button class="active" data-p="home">总览</button>
+  <button data-p="events">事件</button>
+  <button data-p="filter">拦截过滤</button>
+  <button data-p="settings">设置</button>
+  <button data-p="debug">调试</button>
+  <button data-p="logs">日志</button>
+</nav>
+<main>
+  <section class="page active" data-p="home">
+    <div class="grid">
+      <div class="card">
+        <h3>运行状态</h3>
+        <div class="row"><span>后端</span><b id="stBackend">-</b></div>
+        <div class="row"><span>WS 连接</span><b id="stConn">-</b></div>
+        <div class="row"><span>窗口句柄</span><b id="stHwnd" class="mono">-</b></div>
+        <div class="row"><span>错误</span><b id="stErr" class="err">-</b></div>
+        <div class="btns">
+          <button id="btnStart" class="primary">启动采集</button>
+          <button id="btnStop">停止</button>
+          <button id="btnShot">截图测试</button>
+          <button id="btnTitle">读当前标题</button>
+        </div>
+        <p class="hint">启动流程：填好设置页 Token → 启动采集 → 微信来新消息自动上报 core。截图测试把当前微信窗口存成 png 供排查三区域。</p>
+      </div>
+      <div class="card">
+        <h3>计数</h3>
+        <div class="counts" id="counts"></div>
+      </div>
+      <div class="card wide">
+        <h3>最近上报 core 的事件</h3>
+        <div id="homeEvents" class="list"></div>
+      </div>
+    </div>
+  </section>
+  <section class="page" data-p="events">
+    <div class="card wide"><h3>上报事件（近 30 条）</h3><div id="eventsList" class="list"></div></div>
+  </section>
+  <section class="page" data-p="filter">
+    <div class="card wide"><h3>过滤规则</h3>
+      <div class="rule"><b>精确</b><span>微信团队 / 微信支付 / 微信运动 / 微信游戏 / 服务通知 / 订阅号消息 / 文件传输助手 / 企业微信 等</span></div>
+      <div class="rule"><b>后缀</b><span>xx公众号 / xx服务号 / xx订阅号 / xx小程序 / xx官方账号</span></div>
+      <div class="rule"><b>关键词</b><span>微信游戏 / 微信支付 / 服务通知 / 订阅号 / 腾讯新闻 等</span></div>
+      <div class="form">
+        <label>扩展词 FILTER_EXTRA（逗号分隔）<input id="edExtra" type="text" placeholder="如：京东,美团"></label>
+        <label>放行词 FILTER_ALLOW（优先于拦截）<input id="edAllow" type="text" placeholder="如：我的公众号"></label>
+        <button id="btnFilterSave" class="primary">保存过滤词</button>
+      </div>
+    </div>
+    <div class="card wide"><h3>拦截（公众号 / 服务号 / 游戏等，近 20 条）</h3>
+      <div id="blockedList" class="list"></div>
+      <p class="hint">命中即不上报、不入史，直接标已读跳过。发送侧同样拦截（core 下发到公众号直接回 blocked）。</p>
+    </div>
+  </section>
+  <section class="page" data-p="ocr">    <div class="grid ocr-grid">
+      <div class="card wide">
+        <h3>截图文字识别（抓当前微信窗口 → RapidOCR，免保存即看）</h3>
+        <div class="btns">
+          <button id="btnOcr" class="primary">抓取并识别</button>
+          <label class="chk"><input id="ckBoxes" type="checkbox" checked> 显示文本框</label>
+          <span id="ocrMeta" class="hint"></span>
+        </div>
+        <p class="hint">识别用预览坐标，前端 canvas 直接套用；点了抓取后左侧看图、右侧看文字块（x,y,w,h 均为预览像素）。</p>
+      </div>
+      <div class="card">
+        <h3>预览图</h3>
+        <div class="shot-wrap"><canvas id="ocrCanvas"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>识别文本块（<span id="ocrCount">0</span>）</h3>
+        <div id="ocrList" class="list ocr-list"><div>点“抓取并识别”开始</div></div>
+      </div>
+    </div>
+  </section>
+  <section class="page" data-p="media">
+    <div class="grid">
+      <div class="card wide">
+        <h3>多媒体能力自检</h3>
+        <div class="btns">
+          <button id="btnCaps" class="primary">检测本机能力</button>
+          <button id="btnMediaDetect">检测当前消息区气泡</button>
+          <span id="capsMsg" class="hint"></span>
+        </div>
+        <div id="capsList" class="list"></div>
+        <p class="hint">「本机能力」探测依赖是否就绪（剪贴板文件 / VB-CABLE 语音通道 / ASR 端点 / 微信接收目录）；
+          「消息区气泡」实时跑一次像素检测，看图片/文件/视频/表情/语音各类型当前能不能被检出。</p>
+      </div>
+      <div class="card wide">
+        <h3>上报给 core 的能力声明（hello 握手）</h3>
+        <div id="capsDeclared" class="list"></div>
+        <p class="hint">core 据此决定桥接时是原生直发还是降级为占位文本——<b>如实上报</b>，不谎报能力。</p>
+      </div>
+    </div>
+  </section>
+  <section class="page" data-p="settings">
+    <div class="card wide"><h3>连接设置（保存进 config.toml，重启采集生效；Token 明文只存本机）</h3>
+      <div class="form">
+        <label class="chk"><input id="ckAstrbot" type="checkbox"> AstrBot 直连（开启后连 AstrBot 插件的 WS 服务端，关闭则连 core）</label>
+        <label>AstrBot WS 地址<input id="edAstrWs" type="text" placeholder="ws://127.0.0.1:8788"></label>
+        <label>ASTRBOT_TOKEN（与 AstrBot 插件配置里的 token 一致）<input id="edAstrToken" type="text" placeholder="明文显示，留空 = 不改动" autocomplete="off" spellcheck="false"></label>
+        <label>core WS 地址<input id="edWs" type="text"></label>
+        <label>CONNECTOR_ID<input id="edCid" type="text"></label>
+        <label>微信账号<input id="edAcc" type="text"></label>
+        <label>轮询秒数 POLL_SEC<input id="edPoll" type="number" min="0.5" step="0.5"></label>
+        <label>CONNECTOR_TOKEN（core 侧 POST /api/v1/connectors/&lt;id&gt;/token/issue 签发）<input id="edToken" type="text" placeholder="明文显示，留空 = 不改动" autocomplete="off" spellcheck="false"></label>
+        <div class="btns">
+          <button id="btnSave" class="primary">保存设置</button>
+          <button id="btnTestConn">测试验证</button>
+          <span id="saveMsg" class="hint"></span>
+        </div>
+        <div id="testConnResult" class="hint"></div>
+        <div id="connTargetHint" class="hint"></div>
+      </div>
+      <p class="hint">core 侧还要做两步：POST /api/v1/chats/allow 授权会话，POST /api/v1/connectors/&lt;id&gt;/bind 绑定账号。验证：GET /api/v1/status/connections 应有 connected。</p>
+    </div>
+  </section>
+  <section class="page" data-p="debug">
+    <div class="dbg-top">
+      <div class="card wide dbg-card"><h3>环境体检<button class="dbg-fold-btn" data-fold="dbgFoldEnv">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgFoldEnv">
+        <div class="btns">
+          <button id="btnDbgEnv" class="primary">刷新环境</button>
+          <button id="btnDbgShot">抓图</button>
+          <button id="btnDbgAll">一键全检</button>
+        </div>
+        <div id="dbgEnv" class="dbg-env"></div>
+      </div></div>
+    </div>
+
+    <div class="card wide dbg-card"><h3>区域、颜色与点击位置统一标定<button class="dbg-fold-btn" data-fold="dbgFoldRegions">展开/收起</button></h3><div class="dbg-fold collapsed" data-fold-body="dbgFoldRegions">
+      <div class="btns region-edit-toolbar">
+        <button id="btnRegionLoad" class="primary">加载 / 刷新整窗截图</button>
+        <label>编辑区域 / 点位 <select id="regionEditTarget">
+          <option value="session">会话区（绿色）</option>
+          <option value="message">消息区（蓝色）</option>
+          <option value="title">标题区（橙色）</option>
+        </select></label>
+        <button id="btnRegionSave" disabled>保存全部并应用</button>
+        <button id="btnRegionItemReset" disabled>所选项恢复自动</button>
+        <button id="btnRegionReset">全部恢复默认</button>
+      </div>
+      <p class="hint">区域框可移动、拖动四边 / 四角缩放；点击位置可在截图上单击定位或拖动十字标记。下面可配置取色、颜色容差、发送方式、动态点击偏移和检测参数。全部设置在本卡片保存；保存和预览均不会点击微信或发送消息。</p>
+      <div class="dbg-canvas-wrap"><canvas id="regionEditCanvas" aria-label="拖动调整区域、点击位置或取色"></canvas></div>
+      <div id="regionEditStatus" class="hint" aria-live="polite">尚未加载截图</div>
+      <div id="regionEditFields" class="region-edit-fields"></div>
+      <div id="regionEditSettings" class="region-edit-settings"></div>
+    </div></div>
+
+    <div class="dbg-top">
+      <div class="card wide dbg-card"><h3>缩放档位与三区域标定<button class="dbg-fold-btn" data-fold="dbgFoldScale">展开/收起</button></h3><div class="dbg-fold collapsed" data-fold-body="dbgFoldScale">
+        <div class="form">
+          <label>缩放档位（支持 100~150%，超出自动钳制）
+            <div class="dbg-scale-row">
+              <input id="dbgScalePct" type="number" min="50" max="300" step="5" placeholder="如：125">
+              <button id="btnDbgScale" class="primary">应用档位</button>
+              <button id="btnDbgScaleAuto">用实测 DPI</button>
+              <button id="btnDbgScaleProbe">刷新预览</button>
+            </div>
+          </label>
+        </div>
+        <div id="dbgScaleOut" class="dbg-out"></div>
+        <div id="dbgScaleCanvas" class="dbg-canvas-wrap">
+          <canvas id="dbgScaleCanvasEl"></canvas>
+        </div>
+        <p class="hint">绿框=会话区 蓝框=消息区 橙框=标题区。自动边界不准确时，可在上方“手动拖拽调整区域”中调整并保存；手动标定优先于自动探测及缩放档位。</p>
+      </div></div>
+    </div>
+
+    <div class="card dbg-card dbg-workspace">
+      <div class="dbg-workspace-grid">
+      <div class="dbg-workspace-panel"><h3>区域选择</h3><div class="dbg-fold collapsed" data-fold-body="dbgCard1">
+        <div class="form">
+          <label>调试目标区域
+            <select id="dbgRegion">
+              <option value="">整窗（全部）</option>
+              <option value="session">会话区（左侧列表）</option>
+              <option value="message">消息区（聊天内容）</option>
+              <option value="title">标题区（顶部）</option>
+            </select>
+          </label>
+        </div>
+        <div class="btns">
+          <button id="btnDbgOcr" class="primary">区域 OCR</button>
+          <button id="btnDbgMedia">媒体气泡检测</button>
+          <button id="btnDbgEmoji">表情识别</button>
+          <button id="btnDbgImage">图片识别</button>
+          <button id="btnDbgVideo">视频识别</button>
+          <button id="btnDbgBadge">红圈（未读）检测</button>
+          <button id="btnDbgTitle">读标题并解析</button>
+          <button id="btnDbgMsgs">消息解析全链路</button>
+        </div>
+        <div id="dbgCanvasWrap" class="dbg-canvas-wrap">
+          <canvas id="dbgCanvas"></canvas>
+        </div>
+        <div id="dbgCanvasMeta" class="hint"></div>
+      </div></div>
+
+      <div class="dbg-workspace-panel dbg-workspace-results"><h3>识别结果 <span id="dbgChatType" class="chat-type-badge">会话类型 -</span><button class="dbg-fold-btn" data-fold="dbgCard1">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard1">
+        <div id="dbgStats" class="dbg-stats"></div>
+        <div id="dbgText" class="list dbg-text"></div>
+      </div></div>
+      </div>
+    </div>
+
+    <div class="dbg-grid">
+      <div class="card dbg-card"><h3>过滤规则试算<button class="dbg-fold-btn" data-fold="dbgCard3">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard3">
+        <div class="form">
+          <label>会话名<input id="dbgFilterName" type="text" placeholder="如：微信团队 / 某公众号"></label>
+          <label>原始标题（可选）<input id="dbgFilterTitle" type="text" placeholder="如：某公众号(3)"></label>
+          <button id="btnDbgFilter" class="primary">试算 is_blocked</button>
+        </div>
+        <div id="dbgFilterOut" class="dbg-out"></div>
+      </div></div>
+
+      <div class="card dbg-card"><h3>去重试算<button class="dbg-fold-btn" data-fold="dbgCard4">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard4">
+        <div class="form">
+          <label>会话名<input id="dbgDedupChat" type="text" placeholder="debug"></label>
+          <label>文本<input id="dbgDedupText" type="text" placeholder="同一段文本"></label>
+          <label>client_seq（留空用文本生成）<input id="dbgDedupSeq" type="text" placeholder=""></label>
+          <button id="btnDbgDedup" class="primary">试算两次提交</button>
+        </div>
+        <div id="dbgDedupOut" class="dbg-out"></div>
+      </div></div>
+    </div>
+
+    <div class="dbg-grid">
+      <div class="card dbg-card"><h3>发送链路体检<button class="dbg-fold-btn" data-fold="dbgCard5">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard5">
+        <div class="form">
+          <label>目标会话<input id="dbgSendChat" type="text" placeholder="如：文件传输助手"></label>
+          <label>测试文本<input id="dbgSendText" type="text" placeholder="txrui 调试消息"></label>
+          <button id="btnDbgSendDry" class="primary">仅体检（不发送）</button>
+          <button id="btnDbgSendReal">真发一条</button>
+        </div>
+        <div id="dbgSendOut" class="dbg-out"></div>
+        <p class="hint">「真发一条」会切到目标会话并粘贴发送，走与 core 下行同一条发送路径。</p>
+        <div class="form" style="margin-top:10px;border-top:1px dashed #dcdfe6;padding-top:10px">
+          <label>自检发送目标会话（微信列表里看到的名字）<input id="edTestChat" type="text" placeholder="如：摸鱼集团"></label>
+          <label>自检内容（留空自动带时间戳）<input id="edTestText" type="text" placeholder="txrui探针（收到请勿回）"></label>
+          <div class="btns">
+            <button id="btnTestSend" class="primary">发送自检消息</button>
+            <span id="testSendResult" class="hint"></span>
+          </div>
+          <p class="hint">走与 core 下行同一条发送路径（切会话→定位输入框→粘贴发送），用来验证视觉发送环路通不通；core 下发问题另看日志 send_ack。</p>
+        </div>
+      </div></div>
+
+      <div class="card dbg-card"><h3>文件 / 语音链路<button class="dbg-fold-btn" data-fold="dbgCard6">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard6">
+        <div class="form">
+          <label>按显示名找文件本体<input id="dbgFileName" type="text" placeholder="如：report.pdf"></label>
+          <button id="btnDbgFiles" class="primary">查微信接收目录</button>
+          <button id="btnDbgVoice">查语音链路</button>
+        </div>
+        <div id="dbgFileOut" class="dbg-out"></div>
+        <div id="dbgVoiceOut" class="dbg-out"></div>
+      </div></div>
+    </div>
+
+    <div class="card wide dbg-card"><h3>调试原始输出（JSON）<button class="dbg-fold-btn" data-fold="dbgCard7">展开/收起</button></h3><div class="dbg-fold" data-fold-body="dbgCard7">
+      <pre id="dbgRaw" class="logs dbg-raw"></pre>
+    </div></div>
+  </section>
+  <section class="page" data-p="logs">
+    <div class="card wide"><h3>运行日志（近 120 行）</h3><pre id="logs" class="logs"></pre></div>
+  </section>
+</main>
+<div id="toast"></div>
+<script src="api.js"></script>
+<script src="region-editor.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+websockets>=12.0
+rapidocr>=3.0
+onnxruntime>=1.17.0
+numpy>=1.26.0
+Pillow>=10.0.0
+pyautogui>=0.9.54
+pyperclip>=1.8.2
+# Windows 剪贴板文件支持，用于粘贴图片和文件。
+pywin32>=306
+# 以下音频依赖配合 VB-CABLE 提供可选录音发送能力；未配置时可按文件发送音频。
+sounddevice>=0.4.6
+soundfile>=0.12.1
+# 录音发送时通过 IPolicyConfig 切换默认录音设备。
+pycaw>=20240210
+# 桌面网页窗口和系统托盘；缺少 pywebview 时可用浏览器访问本地控制台。
+pywebview==6.2.1
+pystray==0.19.5

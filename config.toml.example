@@ -1,0 +1,41 @@
+# txrui 配置示例：复制为 config.toml，再填写实际连接信息。
+# 环境变量中的非空值优先于文件配置；令牌应仅保存在可信设备上。
+
+[core]
+# core 是支持 Connector 协议的消息服务端；启用 AstrBot 后不使用此地址。
+ws_url = "ws://127.0.0.1:8000/api/v1/connector/ws"
+# 连接器标识和微信账号标识也用于 AstrBot 连接，需与服务端配置一致。
+connector_id = "txrui_001"
+connector_token = ""
+account_id = "wx_001"
+
+[collect]
+# 未读会话检查间隔和连接心跳间隔，单位均为秒。
+poll_sec = 2.0
+heartbeat_sec = 25
+
+[web]
+# 本地控制台监听地址；默认仅允许本机访问。
+host = "127.0.0.1"
+port = 17880
+
+[filter]
+# 逗号分隔的扩展拦截词；默认列表覆盖常见系统入口和公众号/服务号后缀。
+extra = "微信团队,微信支付,微信运动,微信游戏,微信读书,微信听书,服务通知,订阅号消息,订阅号,小程序,微信小程序,微信游戏圈,游戏中心,腾讯新闻,腾讯视频,微信搜一搜,企业微信,文件传输助手,公众号,服务号,订阅号,小程序,官方账号,官方帐号,服务窗"
+allow = ""
+
+[media]
+# 可选语音识别服务：以 multipart/form-data 的 file 字段上传音频，
+# 响应可为纯文本或包含 text 字段的 JSON。留空时不请求外部转写服务。
+asr_endpoint = ""
+# 微信文件搜索目录，多个路径以逗号分隔；留空时搜索预设目录。
+# 文件定位直接读取 WECHAT_FILE_DIRS 环境变量；在控制台保存此项也会设置该变量。
+wechat_file_dirs = ""
+
+[astrbot]
+# 设为 "1" 时连接 astrbot_plugin_txrui 提供的 WebSocket 服务端。
+enabled = "0"
+# 地址应与 AstrBot 插件的监听地址和端口一致。
+ws_url = "ws://127.0.0.1:8788"
+# 连接令牌需与插件一致；留空时使用 core.connector_token。
+token = ""
