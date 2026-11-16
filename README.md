@@ -1,6 +1,6 @@
-# txrui_desktop
+# txrui_wx_desktop
 
-`txrui_desktop` 是独立运行的 Windows 微信桌面连接器，通过窗口截图、光学字符识别（OCR）和鼠标键盘操作收发消息，并通过 WebSocket 将微信接入消息服务端。项目包含本地网页控制台、视觉区域标定、会话过滤和媒体诊断工具。
+`txrui_wx_desktop` 是独立运行的 Windows 微信桌面连接器，通过窗口截图、光学字符识别（OCR）和鼠标键盘操作收发消息，并通过 WebSocket 将微信接入消息服务端。项目包含本地网页控制台、视觉区域标定、会话过滤和媒体诊断工具。
 
 支持两种服务端连接目标：
 
@@ -24,7 +24,7 @@
 在 PowerShell 或命令提示符中执行：
 
 ```bat
-cd txrui_desktop
+cd txrui_wx_desktop
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install -r requirements.txt
@@ -196,7 +196,7 @@ AstrBot 下行媒体仅通过 WebSocket `media_fetch` 获取；core 模式还会
 ## 目录说明
 
 ```text
-txrui_desktop/
+txrui_wx_desktop/
   run.py                  启动入口与无界面运行流程
   config.toml.example     不含实际令牌的配置示例
   regions.json            当前视觉区域和参数配置
