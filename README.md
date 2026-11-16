@@ -1,4 +1,16 @@
-# txrui_wx_desktop
+<div align="center">
+  <img src="assets/mascot.png" width="120" alt="小瑞">
+  <h1>小瑞 PC微信客户端对接框架</h1>
+  <p><sub>靠截图 + OCR</sub></p>
+  <p>
+    <img src="https://img.shields.io/badge/version-v0.0.1-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.1">
+    <img src="https://img.shields.io/badge/WeChat_PC-4.x-35C48D?style=flat-square&amp;labelColor=0B2540" alt="WeChat PC 4.x">
+    <img src="https://img.shields.io/badge/Windows-10+-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=windows&amp;logoColor=white" alt="Windows 10+">
+    <img src="https://img.shields.io/badge/Python-3.11%2B-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=python&amp;logoColor=white" alt="Python 3.11+">
+    <img src="https://img.shields.io/badge/OCR-RapidOCR-7FD4FF?style=flat-square&amp;labelColor=0B2540" alt="RapidOCR">
+    <img src="https://img.shields.io/badge/License-MIT-35C48D?style=flat-square&amp;labelColor=0B2540" alt="MIT License">
+  </p>
+</div>
 
 `txrui_wx_desktop` 是独立运行的 Windows 微信桌面连接器，通过窗口截图、光学字符识别（OCR）和鼠标键盘操作收发消息，并通过 WebSocket 将微信接入消息服务端。项目包含本地网页控制台、视觉区域标定、会话过滤和媒体诊断工具。
 
