@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/mascot.png" width="120" alt="小瑞">
+  <img src="/logo.png" width="120" alt="小瑞">
   <h1>小瑞 PC微信客户端对接框架</h1>
   <p><sub>靠截图 + OCR</sub></p>
   <p>
