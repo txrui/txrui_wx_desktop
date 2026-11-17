@@ -126,6 +126,7 @@ class Runtime:
         self.loop: asyncio.AbstractEventLoop | None = None
         self.thread: threading.Thread | None = None
         self.stop_event = threading.Event()
+        self._main_task: asyncio.Task | None = None
 
     @classmethod
     def current_backend(cls):
@@ -164,11 +165,10 @@ class Runtime:
         from .collector import poll_loop
         from .ws_client import TxruiClient
 
-        # 允许停止后再次启动：清掉上一轮的停止标记
-        try:
-            self.stop_event.clear()
-        except Exception:
-            pass
+        if self.thread is not None and self.thread.is_alive():
+            raise RuntimeError("上一轮采集尚未停止，请稍后重试")
+        # 仅确认旧线程退出后，才允许开始新一轮。
+        self.stop_event.clear()
 
         Runtime._current = self
         _st.set_field("running", True)
@@ -337,36 +337,56 @@ class Runtime:
             self.loop = loop
             asyncio.set_event_loop(loop)
             try:
-                loop.run_until_complete(_amain())
+                self._main_task = loop.create_task(_amain())
+                if self.stop_event.is_set():
+                    self._main_task.cancel()
+                loop.run_until_complete(self._main_task)
+            except asyncio.CancelledError:
+                pass
             except Exception as e:
                 _st.set_field("last_error", str(e)[:300])
                 _st.log(f"运行时异常: {e}")
             finally:
-                _st.set_field("running", False)
-                _st.set_field("connected", False)
+                try:
+                    pending = asyncio.all_tasks(loop)
+                    for task in pending:
+                        task.cancel()
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                finally:
+                    loop.close()
+                    self._main_task = None
+                    _st.set_field("running", False)
+                    _st.set_field("connected", False)
+                    _st.log("采集与网络连接已停止")
 
         self.thread = threading.Thread(target=_thread_main, daemon=True,
                                        name="txrui-runtime")
         self.thread.start()
 
-    def stop(self) -> None:
+    def stop(self) -> bool:
         self.stop_event.set()
-        _st.set_field("running", False)
         loop = self.loop
         thread = self.thread
-        if loop is not None and loop.is_running():
-            # 让客户端观察 stop_event 并自行完成异步清理，避免直接停止事件循环。
+
+        def cancel_tasks():
+            # 同时取消采集和连接任务，唤醒正在等待 WebSocket/重连的协程。
+            for task in asyncio.all_tasks(loop):
+                task.cancel()
+
+        if loop is not None and not loop.is_closed():
             try:
-                loop.call_soon_threadsafe(lambda: None)
+                loop.call_soon_threadsafe(cancel_tasks)
             except RuntimeError:
                 pass
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=5)
-        if loop is not None and not loop.is_running() and not loop.is_closed():
-            try:
-                loop.close()
-            except Exception:
-                pass
+        stopped = thread is None or not thread.is_alive()
+        if stopped:
+            _st.set_field("running", False)
+            _st.set_field("connected", False)
+        return stopped
 
     # ---- GUI 动作 ----
     def test_shot(self) -> str:

@@ -110,24 +110,13 @@ class TxruiBridge:
 
     @_safe
     def runtime_stop(self) -> dict:
-        self.rt.stop()
-        # 等待运行线程退出后重建停止标记和线程引用，便于再次启动。
-        import threading as _th
-
-        def _reset():
-            try:
-                if self.rt.thread is not None:
-                    self.rt.thread.join(timeout=5)
-            except Exception:
-                pass
-            from threading import Event
-            self.rt.stop_event = Event()
-            self.rt.loop = None
-            self.rt.thread = None
-            _st.set_field("backend_ok", False)
-        _th.Thread(target=_reset, daemon=True).start()
-        _st.log("网页控制台：已请求停止")
-        return {"ok": True}
+        stopped = self.rt.stop()
+        if not stopped:
+            _st.log("网页控制台：正在停止，等待当前识别或发送操作结束")
+            return {"ok": True, "stopped": False,
+                    "msg": "正在停止，等待当前识别或发送操作结束"}
+        _st.log("网页控制台：采集已停止")
+        return {"ok": True, "stopped": True, "msg": "采集已停止"}
 
     @_safe
     def test_shot(self) -> dict:

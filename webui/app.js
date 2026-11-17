@@ -21,6 +21,12 @@ document.querySelectorAll("#tabs button").forEach((b) => {
   });
 });
 
+function eventRow(e) {
+  // 正文与群名均来自外部消息，必须转义后再插入页面。
+  return `<div title="${escapeHtml(e.ts || "")}">${chatTypeBadge(e.chat_type)}` +
+    `<b>${escapeHtml(e.chat || "")}</b> | ${escapeHtml(e.sender || "")}: ${escapeHtml(e.text || "")}</div>`;
+}
+
 async function refresh() {
   const r = await callApi("get_status");
   if (!r || !r.ok) return;
@@ -43,11 +49,11 @@ async function refresh() {
     `<div>发送失败<b>${c.sent_fail || 0}</b></div><div>最近事件<b>${st.last_event_ts ? new Date(st.last_event_ts * 1000).toLocaleTimeString() : "-"}</b></div>`;
   const ev = (r.events || []).slice(0, 8);
   $("homeEvents").innerHTML = ev.length
-    ? ev.map((e) => `<div><span class="t">[${e.ts}]</span>${chatTypeBadge(e.chat_type)}<b>${e.chat}</b> | ${e.sender}: ${e.text}</div>`).join("")
+    ? ev.map(eventRow).join("")
     : "<div>暂无上报</div>";
   const evAll = r.events || [];
   $("eventsList").innerHTML = evAll.length
-    ? evAll.map((e) => `<div><span class="t">[${e.ts}]</span>${chatTypeBadge(e.chat_type)}<b>${e.chat}</b> | ${e.sender}: ${e.text}</div>`).join("")
+    ? evAll.map(eventRow).join("")
     : "<div>暂无上报</div>";
   const bl = r.blocked || [];
   $("blockedList").innerHTML = bl.length
@@ -95,9 +101,19 @@ async function boot() {
     refresh();
   };
   $("btnStop").onclick = async () => {
-    await callApi("runtime_stop");
-    toast("已请求停止");
-    refresh();
+    const button = $("btnStop");
+    button.disabled = true;
+    button.textContent = "停止中…";
+    try {
+      const r = await callApi("runtime_stop");
+      toast(r.ok ? (r.msg || "已请求停止") : ("停止失败: " + r.error));
+      await refresh();
+    } catch (error) {
+      toast("停止请求失败: " + error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = "停止";
+    }
   };
   $("btnShot").onclick = async () => {
     const r = await callApi("test_shot");

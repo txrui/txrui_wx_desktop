@@ -120,3 +120,26 @@ def test_picture_ocr_is_not_reported_as_chat_messages():
         messages = backend.get_messages(None, detect_media=True)
     assert [(m["type"], m["content"]) for m in messages] == [
         ("text", "这是文字"), ("emoji", ""), ("image", ""), ("video", "")]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="backend 依赖 Windows")
+@pytest.mark.parametrize("nickname_height", [14, 20])
+def test_group_picture_uses_nickname_and_does_not_emit_it_as_text(nickname_height):
+    from txrui.backend import TxruiBackend
+    image = Image.new("RGB", (600, 400), (250, 250, 250))
+    items = [dict(x=40, y=30, w=80, h=nickname_height, text="田瑞工作室"),
+             dict(x=40, y=230, w=80, h=14, text="田瑞工作室"),
+             dict(x=52, y=252, w=40, h=20, text="哈哈")]
+    bubbles = [dict(x=40, y=55, w=120, h=150, kind="image")]
+    backend = TxruiBackend()
+    backend._message_region = (0, 0, 1, 1)
+    with patch("txrui.scale.k", return_value=125 / 175), \
+            patch.object(backend, "read_title", return_value="田瑞工作室、田瑞工作室、田小瑞(3)"), \
+            patch.object(backend, "_shot", return_value=image), \
+            patch("txrui.backend._ocr.ocr_image", return_value=items), \
+            patch("txrui.media.detect_media_bubbles", return_value=bubbles), \
+            patch("txrui.message_layout.text_is_self", return_value=False):
+        messages = backend.get_messages(None, detect_media=True)
+    assert [(m["type"], m["sender"], m["content"]) for m in messages] == [
+        ("image", "田瑞工作室", ""), ("text", "田瑞工作室", "哈哈")]
+

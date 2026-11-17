@@ -3,7 +3,7 @@
   <h1>小瑞 PC微信客户端对接框架</h1>
   <p><sub>靠截图 + OCR</sub></p>
   <p>
-    <img src="https://img.shields.io/badge/version-v0.0.3-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.1">
+    <img src="https://img.shields.io/badge/version-v0.0.4-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.1">
     <img src="https://img.shields.io/badge/WeChat_PC-4.x-35C48D?style=flat-square&amp;labelColor=0B2540" alt="WeChat PC 4.x">
     <img src="https://img.shields.io/badge/Windows-10+-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=windows&amp;logoColor=white" alt="Windows 10+">
     <img src="https://img.shields.io/badge/Python-3.11%2B-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=python&amp;logoColor=white" alt="Python 3.11+">

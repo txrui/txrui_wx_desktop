@@ -394,11 +394,40 @@ class TxruiBackend:
         msgs: list[dict] = []
         group_sender_rows: dict[int, str] = {}
         consumed_sender_rows: set[int] = set()
+        media_senders: dict[int, str] = {}
         if self._current_is_group:
             # 群聊成员名称通常位于左侧消息气泡上方；名称行应短、靠左，
             # 并且与下一行正文保持较小的垂直间距。识别后从正文中移除。
             incoming_rows = [(idx, row) for idx, row in enumerate(rows)
                              if not sides[id(row[0])]]
+            # Media has no OCR body row. Match its immediately preceding nickname
+            # before pairing text rows, so the nickname is not emitted as a message.
+            for bubble_idx, bubble in enumerate(bubbles):
+                if text_is_self(region, bubble):
+                    continue
+                preceding = [(idx, row) for idx, row in incoming_rows
+                             if max(r["y"] + r["h"] for r in row) <= bubble["y"]]
+                if not preceding:
+                    continue
+                idx, row = preceding[-1]
+                if idx in consumed_sender_rows:
+                    continue
+                label = " ".join(r["text"] for r in sorted(row, key=lambda r: r["x"])).strip()
+                row_x = min(r["x"] for r in row)
+                row_height = max(r["h"] for r in row)
+                row_width = max(r["x"] + r["w"] for r in row) - row_x
+                gap = bubble["y"] - max(r["y"] + r["h"] for r in row)
+                if (0 < len(label) <= 24 and len(row) <= 2
+                        and not re.search(r"[，。！？!?：:、]|^[\d\s]+$", label)
+                        # OCR 框包含字形外边缘：125% 实测昵称框高 20px，
+                        # 旧阈值 18px 会漏配，导致昵称与图片拆成两条事件。
+                        and row_height <= max(22, 28 * _scale.k())
+                        and row_width <= max(180, rw * 0.28)
+                        and row_x < rw * 0.45
+                        and abs(bubble["x"] - row_x) <= max(32, row_height * 2)
+                        and gap <= max(24, 42 * _scale.k())):
+                    media_senders[bubble_idx] = label
+                    consumed_sender_rows.add(idx)
             for pos, (idx, row) in enumerate(incoming_rows[:-1]):
                 if idx in consumed_sender_rows or idx in group_sender_rows:
                     continue
@@ -470,13 +499,14 @@ class TxruiBackend:
                 from .message_layout import media_contains_text
                 self_bottom = max((m["_box"]["y"] + m["_box"]["h"]
                                    for m in msgs if m["type"] == "self"), default=-1)
-                for b in bubbles:
+                for bubble_idx, b in enumerate(bubbles):
                     if text_is_self(region, b) or b["y"] < self_bottom:
                         continue
                     owner = next((m for m in out
                                   if m.get("_box") and media_contains_text(b, m["_box"])), None)
                     if owner is None:
-                        owner = {"chat": chat, "sender": chat or "",
+                        owner = {"chat": chat,
+                                 "sender": media_senders.get(bubble_idx, chat or ""),
                                  "content": "", "type": "other", "y": b["y"],
                                  "media": []}
                         out.append(owner)
