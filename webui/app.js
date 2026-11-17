@@ -597,6 +597,13 @@ function bootDebug() {
       dbgRaw(x);
     });
   };
+  $("btnDbgSendLogo").onclick = async () => {
+    if (!confirm("确认将 logo.png 发送到微信当前打开的会话？")) return;
+    const result = await callApi("test_send_logo");
+    dbgOut("dbgText", [["发送 logo.png", result.ok ? (result.result || "发送成功") : (result.error || "发送失败"), result.ok ? "ok" : "no"]]);
+    dbgRaw(result);
+    toast(result.ok ? "logo.png 已发送" : (result.error || "发送失败"));
+  };
   $("btnDbgFilter").onclick = async () => {
     await dbgRun("debug_filter", [$("dbgFilterName").value, $("dbgFilterTitle").value], (x) => {
       dbgOut("dbgFilterOut", [

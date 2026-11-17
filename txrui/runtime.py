@@ -293,9 +293,13 @@ class Runtime:
                 pass
             # 3) 粘贴发出
             try:
-                ok = _sender.send_media_bytes(backend._hwnd, chat_id, data,
-                                              suffix=_suffix_for(filename),
-                                              filename=filename)
+                if seg_type in ("image", "sticker"):
+                    ok = _sender.send_image_bytes(backend._hwnd, data,
+                                                  suffix=_suffix_for(filename))
+                else:
+                    ok = _sender.send_media_bytes(backend._hwnd, chat_id, data,
+                                                  suffix=_suffix_for(filename),
+                                                  filename=filename)
             except Exception as e:  # noqa: BLE001
                 _st.bump("sent_fail")
                 return {"ok": False, "unknown": True, "platform_message_id": "",

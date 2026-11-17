@@ -136,6 +136,47 @@ def send_media_file(hwnd, chat: str, file_path: str, enter: bool = True) -> bool
         return False
 
 
+def send_image_file(hwnd, image_path: str, enter: bool = True) -> bool:
+    """将图片作为剪贴板位图粘贴发送，避免按 CF_HDROP 当作普通文件发送。"""
+    if not image_path or not os.path.isfile(image_path):
+        logger.error(f"发送图片失败：文件不存在 {image_path!r}")
+        return False
+    try:
+        import pyautogui
+        from PIL import Image
+        from . import media_grab as _mg
+        with Image.open(image_path) as image:
+            if not _mg.copy_image_to_clipboard(image):
+                logger.error("发送图片失败：写入剪贴板位图失败")
+                return False
+        if not _focus_input(hwnd):
+            return False
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.4)
+        if enter:
+            _submit(hwnd)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"发送图片失败: {e}")
+        return False
+
+
+def send_image_bytes(hwnd, data: bytes, suffix: str = ".png") -> bool:
+    """将图片字节写入临时图片文件后，按图片格式粘贴发送并清理临时文件。"""
+    if not data:
+        logger.error("发送图片失败：图片字节为空")
+        return False
+    from . import media_grab as _mg
+    path = _mg.save_temp(data, suffix=suffix)
+    try:
+        return send_image_file(hwnd, path)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def send_media_bytes(hwnd, chat: str, data: bytes, suffix: str = ".png",
                      filename: str = "") -> bool:
     """将字节保存为指定后缀的临时文件后发送，并尝试删除；filename 未使用。"""

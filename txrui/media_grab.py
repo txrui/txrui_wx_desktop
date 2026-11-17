@@ -360,24 +360,19 @@ def copy_image_to_clipboard(image) -> bool:
         import io
         import win32clipboard
         import win32con
-        from PIL import ImageGrab
+        from PIL import Image
     except Exception as e:  # noqa: BLE001
         logger.warning(f"pywin32/PIL 不可用，无法写剪贴板位图: {e}")
         return False
     try:
+        # CF_DIB 接受不含 14 字节 BMP 文件头的 DIB 数据；PNG 原始字节不能直接写入。
         buf = io.BytesIO()
-        image.convert("RGB").save(buf, format="PNG")
-        data = buf.getvalue()
-        import ctypes
-        GMEM_MOVEABLE = 0x0002
-        hmem = ctypes.windll.kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
-        ptr = ctypes.windll.kernel32.GlobalLock(hmem)
-        ctypes.memmove(ptr, data, len(data))
-        ctypes.windll.kernel32.GlobalUnlock(hmem)
+        image.convert("RGB").save(buf, format="BMP")
+        dib = buf.getvalue()[14:]
         win32clipboard.OpenClipboard()
         try:
             win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardData(win32con.CF_DIB, hmem)
+            win32clipboard.SetClipboardData(win32con.CF_DIB, dib)
         finally:
             win32clipboard.CloseClipboard()
         return True

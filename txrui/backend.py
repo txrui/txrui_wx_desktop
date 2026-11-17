@@ -109,16 +109,17 @@ class TxruiBackend:
         shot = self._shot(foreground=False)
         if shot is None:
             return
-        import ctypes.wintypes as wt
         badges = _badge.detect_red_clusters(shot, region=_visual().get("unread", self._session_region))
         if not badges:
             return
-        rect = wt.RECT()
-        _cap.u32.GetWindowRect(self._hwnd, __import__("ctypes").byref(rect))
+        rect = _cap._with_per_monitor_dpi(lambda: _cap.window_rect(self._hwnd))
+        if not rect:
+            return
+        origin_x, origin_y = rect[:2]
         seen: list = []
         for (bl, bt, br, bb) in sorted(badges, key=lambda b: (b[1], b[0])):
-            bcx = rect.left + (bl + br) // 2
-            bcy = rect.top + (bt + bb) // 2
+            bcx = origin_x + (bl + br) // 2
+            bcy = origin_y + (bt + bb) // 2
             if any(abs(bcy - y) < _scale.px(_v("badge_row_tol")) for y in seen):
                 continue
             seen.append(bcy)
@@ -134,11 +135,11 @@ class TxruiBackend:
         shot = self._shot(foreground=False)
         if shot is None:
             return False
-        import ctypes.wintypes as wt
         w, _h = shot.size
-        rect = wt.RECT()
-        _cap.u32.GetWindowRect(self._hwnd, __import__("ctypes").byref(rect))
-        py = screen_y - rect.top
+        rect = _cap._with_per_monitor_dpi(lambda: _cap.window_rect(self._hwnd))
+        if not rect:
+            return False
+        py = screen_y - rect[1]
         sample = _visual().get("selected_sample")
         px = min(w - 1, round(sample[0] * w)) if sample else int(w * self._session_region[0]) + round(_v("selected_sample_x"))
         try:
@@ -175,12 +176,11 @@ class TxruiBackend:
         shot = self._shot(foreground=False)
         if shot is None:
             return
-        import ctypes
-        import ctypes.wintypes as wt
         w, _h = shot.size
-        rect = wt.RECT()
-        _cap.u32.GetWindowRect(self._hwnd, ctypes.byref(rect))
-        py = screen_y - rect.top
+        rect = _cap._with_per_monitor_dpi(lambda: _cap.window_rect(self._hwnd))
+        if not rect:
+            return
+        py = screen_y - rect[1]
         sample = _visual().get("selected_sample")
         px = min(w - 1, round(sample[0] * w)) if sample else int(w * self._session_region[0]) + round(_v("selected_sample_x"))
         try:
@@ -276,12 +276,11 @@ class TxruiBackend:
         if hit is None:
             logger.warning(f"[切换] 列表区未找到会话 {chat!r}")
             return False
-        import ctypes
-        import ctypes.wintypes as wt
-        rect = wt.RECT()
-        _cap.u32.GetWindowRect(self._hwnd, ctypes.byref(rect))
-        cx = rect.left + int(w * sr[0]) + hit["x"] + hit["w"] // 2
-        cy = rect.top + int(h * sr[1]) + hit["y"] + hit["h"] // 2
+        rect = _cap._with_per_monitor_dpi(lambda: _cap.window_rect(self._hwnd))
+        if not rect:
+            return False
+        cx = rect[0] + int(w * sr[0]) + hit["x"] + hit["w"] // 2
+        cy = rect[1] + int(h * sr[1]) + hit["y"] + hit["h"] // 2
         try:
             import pyautogui
             _cap.foreground(self._hwnd)

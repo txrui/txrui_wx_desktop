@@ -197,6 +197,17 @@ async def poll_once(backend, client, account_id: str, dedup: OcrDedup,
         # 名字由 get_messages 联合OCR给出（读标题），不单独OCR
         try:
             msgs = backend.get_messages(None, detect_media=detect_media and MEDIA_ENABLED)
+            # 未读红点会在切入会话后消失；如果 OCR 这一帧暂时没有读到内容，
+            # 立即标已读会让该会话失去后续重试机会。短暂等待后补读两次。
+            for retry in range(2):
+                if msgs:
+                    break
+                await asyncio.sleep(0.35)
+                msgs = backend.get_messages(None, detect_media=detect_media and MEDIA_ENABLED)
+            if not msgs:
+                logger.warning("切入未读会话后连续三次未识别到消息；跳过标已读以便后续重试")
+                _st.log("未读会话连续三次未识别到消息，暂不标已读，将等待后续重试")
+                continue
         except Exception as e:
             logger.warning(f"读取失败: {e}")
             _st.log(f"读取失败: {e}")

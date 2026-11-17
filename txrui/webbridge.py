@@ -169,6 +169,25 @@ class TxruiBridge:
         return {"ok": False, "error": "visual_send_failed（输入框定位/粘贴失败，看截图识别页确认三区域）"}
 
     @_safe
+    def test_send_logo(self) -> dict:
+        """将应用内 logo.png 发送到当前已打开的微信会话，不切换会话。"""
+        backend = getattr(self.rt, "backend", None)
+        hwnd = getattr(backend, "_hwnd", None) if backend is not None else None
+        if hwnd is None:
+            return {"ok": False, "error": "后端未连接：先点“启动采集”"}
+        from .paths import resource_dir
+        logo_path = resource_dir() / "logo.png"
+        if not logo_path.is_file():
+            return {"ok": False, "error": f"找不到图片文件: {logo_path}"}
+        from . import sender as _sender
+        ok = _sender.send_image_file(hwnd, str(logo_path))
+        _st.bump("sent_ok" if ok else "sent_fail")
+        _st.log(f"[调试发送图片] 当前会话 logo.png {'成功' if ok else '失败'}")
+        if ok:
+            return {"ok": True, "result": "logo.png 已发送到当前会话"}
+        return {"ok": False, "error": "视觉发送失败（检查输入框定位和剪贴板文件依赖）"}
+
+    @_safe
     def read_title(self) -> dict:
         r = self.rt.read_title_now()
         return {"ok": True, "result": r}

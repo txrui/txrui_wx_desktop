@@ -44,8 +44,8 @@ def norm_cjk(text: str) -> str:
     return out.strip()
 
 
-def ocr_image(img, max_w: int = 0) -> list[dict]:
-    """返回文本和矩形框；启用 max_w 时坐标对应缩放后的输入图，不还原原尺寸。"""
+def ocr_image(img, max_w: int = 0, upscale: float = 1.0) -> list[dict]:
+    """返回文本和矩形框；max_w 缩图时坐标对应缩放输入，upscale 放大时框映射回原图。"""
     engine = get_engine()
     if not engine:
         return []
@@ -53,6 +53,9 @@ def ocr_image(img, max_w: int = 0) -> list[dict]:
         ratio = max_w / img.width
         from PIL import Image
         img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
+    elif upscale > 1:
+        from PIL import Image
+        img = img.resize((round(img.width * upscale), round(img.height * upscale)), Image.LANCZOS)
     import numpy as np
     try:
         rgb = img.convert("RGB")
@@ -84,8 +87,12 @@ def ocr_image(img, max_w: int = 0) -> list[dict]:
             xs = [p[0] for p in box]
             ys = [p[1] for p in box]
             x, y, x2, y2 = min(xs), min(ys), max(xs), max(ys)
-            items.append({"text": text, "x": int(x), "y": int(y),
-                          "w": int(x2 - x), "h": int(y2 - y)})
+            scale_back = (1.0 / upscale) if upscale > 1 else 1.0
+            items.append({"text": text,
+                          "x": round(int(x) * scale_back),
+                          "y": round(int(y) * scale_back),
+                          "w": round(int(x2 - x) * scale_back),
+                          "h": round(int(y2 - y) * scale_back)})
         return items
     except Exception as e:
         logger.warning(f"OCR 失败: {e}")
