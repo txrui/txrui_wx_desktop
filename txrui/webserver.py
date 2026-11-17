@@ -100,7 +100,9 @@ class WebServer:
         # 端口占用时向上漂移
         for p in range(self.port, self.port + 20):
             try:
-                self._srv = ThreadingHTTPServer((self.host, p), _Handler)
+                srv = ThreadingHTTPServer((self.host, p), _Handler)
+                srv.daemon_threads = True
+                self._srv = srv
                 self.port = p
                 break
             except OSError:
@@ -113,8 +115,14 @@ class WebServer:
         return f"http://{self.host}:{self.port}/"
 
     def stop(self) -> None:
-        if self._srv is not None:
-            try:
-                self._srv.shutdown()
-            except Exception:
-                pass
+        srv, self._srv = self._srv, None
+        if srv is None:
+            return
+        try:
+            srv.shutdown()
+        finally:
+            # shutdown() 只停止 serve_forever，不会释放监听 socket。
+            srv.server_close()
+            thread, self._thread = self._thread, None
+            if thread is not None and thread is not threading.current_thread():
+                thread.join(timeout=2)

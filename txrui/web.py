@@ -44,6 +44,7 @@ def run_web(runtime, bridge, host: str = "127.0.0.1", port: int = 17880,
 
     # 托盘提供显示面板和退出入口；依赖不可用时仅记录日志。
     tray = None
+    exiting = threading.Event()
     try:
         import pystray
         from PIL import Image, ImageDraw
@@ -65,21 +66,26 @@ def run_web(runtime, bridge, host: str = "127.0.0.1", port: int = 17880,
             except Exception:
                 pass
 
-        def _quit(icon=None, item=None):
+        def _shutdown(icon=None, item=None):
+            exiting.set()
             try:
                 runtime.stop()
             except Exception:
-                pass
+                logger.exception("停止运行时失败")
             try:
                 server.stop()
             except Exception:
-                pass
+                logger.exception("停止本地服务失败")
+            if tray is not None:
+                try:
+                    tray.stop()
+                except Exception:
+                    pass
+
+        def _quit(icon=None, item=None):
+            _shutdown(icon, item)
             try:
                 win.destroy()
-            except Exception:
-                pass
-            try:
-                icon.stop()
             except Exception:
                 pass
 
@@ -92,12 +98,29 @@ def run_web(runtime, bridge, host: str = "127.0.0.1", port: int = 17880,
         _st.log(f"托盘未启用: {e}")
 
     def _on_closing():
-        # 关窗口只隐藏（托盘继续跑采集）
+        if exiting.is_set():
+            return True
+        # “是”完全退出，“否”隐藏到托盘继续运行。
         try:
-            win.hide()
-        except Exception:
-            pass
-        return False
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
+            exit_app = messagebox.askyesno(
+                "退出 txrui", "选择“是”完全退出程序；选择“否”最小化到后台运行。",
+                parent=root)
+            root.destroy()
+        except Exception as e:
+            logger.warning("显示退出选择框失败，按完全退出处理: %s", e)
+            exit_app = True
+        if not exit_app:
+            try:
+                win.hide()
+            except Exception:
+                pass
+            return False
+        _shutdown()
+        return True
 
     win.events.closing += _on_closing
     try:

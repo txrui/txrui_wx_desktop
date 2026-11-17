@@ -352,9 +352,19 @@ class Runtime:
     def stop(self) -> None:
         self.stop_event.set()
         _st.set_field("running", False)
-        if self.loop is not None:
+        loop = self.loop
+        thread = self.thread
+        if loop is not None and loop.is_running():
+            # 让客户端观察 stop_event 并自行完成异步清理，避免直接停止事件循环。
             try:
-                self.loop.call_soon_threadsafe(self.loop.stop)
+                loop.call_soon_threadsafe(lambda: None)
+            except RuntimeError:
+                pass
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=5)
+        if loop is not None and not loop.is_running() and not loop.is_closed():
+            try:
+                loop.close()
             except Exception:
                 pass
 
