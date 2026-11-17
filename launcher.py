@@ -42,7 +42,8 @@ def main() -> int:
             from txrui import config as C, region_settings
             from txrui.ocr import get_engine
             from txrui.webserver import WEBUI_DIR
-            import webview
+            from txrui.desktop_runtime import check_desktop_runtime
+            desktop = check_desktop_runtime()
             import pystray
             import win32clipboard
             import onnxruntime
@@ -51,7 +52,7 @@ def main() -> int:
             assert region_settings._PATH == home / "regions.json", "区域配置路径错误"
             assert get_engine() is not None, "OCR 初始化失败"
             (home / "self-test.json").write_text(json.dumps({
-                "ok": True, "config": str(config), "webui": WEBUI_DIR,
+                "ok": True, "desktop": desktop, "config": str(config), "webui": WEBUI_DIR,
                 "onnxruntime": onnxruntime.__version__,
             }, ensure_ascii=False, indent=2), encoding="utf-8")
             return 0

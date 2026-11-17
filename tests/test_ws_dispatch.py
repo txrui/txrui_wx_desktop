@@ -110,6 +110,58 @@ class TestDispatchSend:
             assert order == [("text", "看这个"), ("media", "image")]
         _run(scenario())
 
+    def test_mixed_text_and_media(self):
+        async def scenario():
+            c = _client()
+            order = []
+
+            async def _send(a, ch, t):
+                order.append(("text", t))
+                return {"ok": True, "unknown": False,
+                        "platform_message_id": "", "error": ""}
+
+            async def _media(a, ch, stype, seg):
+                order.append(("media", stype))
+                return {"ok": True, "unknown": False,
+                        "platform_message_id": "", "error": ""}
+
+            c.bind_sender(_send)
+            c.bind_media_sender(_media)
+            r = await c._dispatch_send({
+                "account_id": "wx1", "chat_id": "张三",
+                "content": [{"type": "text", "text": "看这个"},
+                            {"type": "image", "media_id": "mb_1"}]})
+            assert r["ok"] is True
+            assert order == [("text", "看这个"), ("media", "image")]
+        _run(scenario())
+
+    def test_mixed_text_and_image_uses_one_sender(self):
+        async def scenario():
+            c = _client()
+            calls = []
+
+            async def _send_mixed(a, ch, text, segment, chat_type=""):
+                calls.append((text, segment, chat_type))
+                return {"ok": True, "unknown": False,
+                        "platform_message_id": "", "error": ""}
+
+            async def _send(a, ch, t):
+                raise AssertionError("mixed message must not use the text sender")
+
+            async def _media(a, ch, stype, seg):
+                raise AssertionError("mixed message must not use the media sender")
+
+            c.bind_sender(_send)
+            c.bind_media_sender(_media)
+            c.bind_mixed_sender(_send_mixed)
+            r = await c._dispatch_send({
+                "account_id": "wx1", "chat_id": "张三", "chat_type": "group",
+                "content": [{"type": "text", "text": "转发：群 用户 "},
+                            {"type": "image", "media_id": "mb_1"}]})
+            assert r["ok"] is True
+            assert calls == [("转发：群 用户 ", {"type": "image", "media_id": "mb_1"}, "group")]
+        _run(scenario())
+
     def test_audio_fails_honestly(self):
         """未绑定语音发送能力时，音频段返回不支持错误。"""
         async def scenario():

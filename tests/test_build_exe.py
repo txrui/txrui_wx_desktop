@@ -14,6 +14,7 @@ ROOT = Path(build_exe.__file__).resolve().parent
 def test_global_dependency_conflicts_warn_by_default(capsys):
     result = subprocess.CompletedProcess([], 1, "paddlex requires numpy<2.4\n", "")
     with patch.object(build_exe.sys, "platform", "win32"), \
+            patch.object(build_exe, "validate_pythonnet_source"), \
             patch.object(build_exe.importlib.util, "find_spec", return_value=object()), \
             patch.object(build_exe.subprocess, "run", return_value=result):
         build_exe.check_environment(ROOT)
@@ -23,6 +24,7 @@ def test_global_dependency_conflicts_warn_by_default(capsys):
 def test_strict_dependency_conflicts_fail():
     result = subprocess.CompletedProcess([], 1, "dependency conflict", "")
     with patch.object(build_exe.sys, "platform", "win32"), \
+            patch.object(build_exe, "validate_pythonnet_source"), \
             patch.object(build_exe.importlib.util, "find_spec", return_value=object()), \
             patch.object(build_exe.subprocess, "run", return_value=result):
         with pytest.raises(RuntimeError, match="严格依赖检查失败"):
@@ -32,6 +34,7 @@ def test_strict_dependency_conflicts_fail():
 def test_successful_dependency_check_has_no_warning(capsys):
     result = subprocess.CompletedProcess([], 0, "No broken requirements found.", "")
     with patch.object(build_exe.sys, "platform", "win32"), \
+            patch.object(build_exe, "validate_pythonnet_source"), \
             patch.object(build_exe.importlib.util, "find_spec", return_value=object()), \
             patch.object(build_exe.subprocess, "run", return_value=result):
         build_exe.check_environment(ROOT)
@@ -79,4 +82,49 @@ def test_transient_windows_access_denied_retries(tmp_path):
             patch.object(build_exe.time, "sleep"):
         build_exe.rename_with_retry(tmp_path / "a", tmp_path / "b")
     assert rename.call_count == 2
+
+
+def test_bundle_requires_managed_and_native_bridges(tmp_path):
+    with pytest.raises(RuntimeError, match="Python.Runtime.dll"):
+        build_exe.validate_bundle(tmp_path)
+    files = (
+        "pythonnet/runtime/Python.Runtime.dll", "pythonnet/runtime/Python.Runtime.deps.json",
+        "txrui.netfx.config", "webui/index.html",
+        "webview/lib/Microsoft.Web.WebView2.Core.dll",
+        "webview/lib/Microsoft.Web.WebView2.WinForms.dll",
+        "webview/lib/runtimes/win-x64/native/WebView2Loader.dll",
+        "clr_loader/ffi/dlls/amd64/ClrLoader.dll",
+    )
+    for name in files:
+        path = tmp_path / "_internal" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"test")
+    build_exe.validate_bundle(tmp_path)
+
+
+def test_self_test_rejects_stale_report(tmp_path):
+    (tmp_path / "self-test.json").write_text('{"ok": true}')
+    with patch.object(build_exe.subprocess, "run",
+                      return_value=subprocess.CompletedProcess([], 0)):
+        with pytest.raises(RuntimeError, match="EXE 自检失败"):
+            build_exe.test_bundle(tmp_path / "txrui.exe")
+    assert not (tmp_path / "self-test.json").exists()
+
+
+def test_self_test_rejects_import_only_report(tmp_path):
+    def run(*args, **kwargs):
+        (tmp_path / "self-test.json").write_text('{"ok": true}')
+        return subprocess.CompletedProcess([], 0)
+    with patch.object(build_exe.subprocess, "run", side_effect=run):
+        with pytest.raises(RuntimeError, match="桌面桥接自检未通过"):
+            build_exe.test_bundle(tmp_path / "txrui.exe")
+
+
+def test_self_test_accepts_edgechromium_report(tmp_path):
+    def run(*args, **kwargs):
+        (tmp_path / "self-test.json").write_text(
+            '{"ok": true, "desktop": {"renderer": "edgechromium"}}')
+        return subprocess.CompletedProcess([], 0)
+    with patch.object(build_exe.subprocess, "run", side_effect=run):
+        assert build_exe.test_bundle(tmp_path / "txrui.exe")["ok"]
 

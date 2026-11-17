@@ -105,6 +105,34 @@ def send_text(hwnd, chat: str, text: str) -> bool:
         return False
 
 
+def send_text_and_image(hwnd, text: str, image_data: bytes) -> bool:
+    """Paste one text-and-image message and submit it once."""
+    try:
+        import io
+        import pyautogui
+        import pyperclip
+        from PIL import Image
+        from . import media_grab as _mg
+
+        if not text or not image_data or not _focus_input(hwnd):
+            return False
+        pyperclip.copy(text)
+        time.sleep(0.1)
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.2)
+        with Image.open(io.BytesIO(image_data)) as image:
+            if not _mg.copy_image_to_clipboard(image):
+                logger.error("Failed to send text and image: image clipboard copy failed")
+                return False
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.4)
+        _submit(hwnd)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to send text and image: {e}")
+        return False
+
+
 def send_media_file(hwnd, chat: str, file_path: str, enter: bool = True) -> bool:
     """将本地文件写入剪贴板并粘贴，enter 为真时按配置触发发送。
 

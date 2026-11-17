@@ -1,7 +1,7 @@
 """txrui 的 Windows 启动入口，提供桌面控制台和无界面运行模式。
 
 默认启动本地网页服务及 pywebview 窗口；关闭窗口隐藏到托盘，托盘菜单负责退出。
-缺少 pywebview 时保持网页服务运行，供浏览器访问。--debug 启用开发者工具。
+缺少 pywebview 或 WebView2 时保持网页服务运行，供浏览器访问；--browser 强制使用浏览器模式。--debug 启用开发者工具。
 --headless 直接启动窗口识别、消息采集和 WebSocket 连接，不提供控制台。
 """
 from __future__ import annotations
@@ -17,20 +17,23 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("txrui")
 
 
-def main(debug: bool = False):
+def main(debug: bool = False, browser: bool = False):
     from txrui import config as C
     if not C.CONNECTOR_TOKEN:
         _st.log("缺少 CONNECTOR_TOKEN：请在网页设置页填入 core 签发的令牌再点启动")
     rt = Runtime()
     bridge = TxruiBridge(rt)
     from txrui.web import run_web
-    run_web(rt, bridge, host=C.WEB_HOST, port=C.WEB_PORT, debug=debug)
+    run_web(rt, bridge, host=C.WEB_HOST, port=C.WEB_PORT, debug=debug,
+            browser=browser)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="txrui 控制面板（网页前端）")
     ap.add_argument("--debug", action="store_true", help="打开 WebView2 开发者工具")
-    ap.add_argument("--headless", action="store_true", help="纯后台跑（无网页控制台）")
+    modes = ap.add_mutually_exclusive_group()
+    modes.add_argument("--browser", action="store_true", help="使用系统浏览器打开控制台，不启动内嵌桌面窗口")
+    modes.add_argument("--headless", action="store_true", help="纯后台跑（无网页控制台）")
     args = ap.parse_args()
     if args.headless:
         import asyncio
@@ -85,4 +88,4 @@ if __name__ == "__main__":
 
         asyncio.run(_main())
     else:
-        main(debug=args.debug)
+        main(debug=args.debug, browser=args.browser)

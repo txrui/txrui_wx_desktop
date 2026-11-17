@@ -311,7 +311,66 @@ class Runtime:
             return {"ok": False, "unknown": False, "platform_message_id": "",
                     "error": "media_send_failed"}
 
+        async def _send_mixed(account_id: str, chat_id: str, text: str,
+                              segment: dict, chat_type: str = "") -> dict:
+            """Send leading text and one image through a single composer submission."""
+            from .filters import is_blocked
+            from . import sender as _sender
+
+            blocked, reason = is_blocked(chat_id)
+            if blocked:
+                _st.note_blocked(chat_id, f"outbound:{reason}")
+                _st.log(f"[拦截发送] {chat_id!r} ({reason}) 拒绝下发")
+                return {"ok": False, "unknown": False, "platform_message_id": "",
+                        "error": f"blocked:{reason}"[:200]}
+            expect_type = str(chat_type or "").strip().lower()
+            if expect_type not in ("private", "group"):
+                expect_type = backend.resolve_chat_type(chat_id).get("chat_type") or "private"
+            try:
+                if not backend.ensure_chat(chat_id):
+                    _st.bump("sent_fail")
+                    return {"ok": False, "unknown": False, "platform_message_id": "",
+                            "error": f"switch_chat_failed:{chat_id}"[:200]}
+            except Exception as e:  # noqa: BLE001
+                _st.bump("sent_fail")
+                return {"ok": False, "unknown": True, "platform_message_id": "",
+                        "error": f"switch_exception:{str(e)[:160]}"}
+            try:
+                actual = backend.current_chat_type()
+                if actual and actual != expect_type:
+                    _st.bump("sent_fail")
+                    _st.log(f"[发送拒绝] 会话类型不符：目标={chat_id!r} "
+                            f"期望={expect_type} 实际={actual}")
+                    return {"ok": False, "unknown": False, "platform_message_id": "",
+                            "error": f"chat_type_mismatch:{expect_type}!={actual}"[:200]}
+            except Exception:
+                pass
+
+            filename = str(segment.get("text") or "") or "image.png"
+            media_id = str(segment.get("media_id") or "")
+            url = str(segment.get("url") or "")
+            data = b""
+            if media_id or url:
+                data, _ = await _fetch_blob(media_id, url, filename, client=client)
+            if not data:
+                return {"ok": False, "unknown": False, "platform_message_id": "",
+                        "error": "no_media_blob:核心无媒体本体（占位段无法直发）"}
+            try:
+                ok = _sender.send_text_and_image(backend._hwnd, text, data)
+            except Exception as e:  # noqa: BLE001
+                _st.bump("sent_fail")
+                return {"ok": False, "unknown": True, "platform_message_id": "",
+                        "error": f"send_exception:{str(e)[:160]}"}
+            _st.bump("sent_ok" if ok else "sent_fail")
+            if ok:
+                _st.log(f"[发送] {chat_id!r} type={expect_type} 文本和图片已一次提交")
+                return {"ok": True, "unknown": False, "platform_message_id": "",
+                        "error": ""}
+            return {"ok": False, "unknown": False, "platform_message_id": "",
+                    "error": "text_image_send_failed"}
+
         client.bind_media_sender(_send_media)
+        client.bind_mixed_sender(_send_mixed)
         self.client = client
 
         async def _amain():

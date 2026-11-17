@@ -3,9 +3,9 @@
   <h1>小瑞 PC微信客户端对接框架</h1>
   <p><sub>靠截图 + OCR</sub></p>
   <p>
-    <img src="https://img.shields.io/badge/version-v0.0.4-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.1">
+    <img src="https://img.shields.io/badge/version-v0.0.4-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.4">
     <img src="https://img.shields.io/badge/WeChat_PC-4.x-35C48D?style=flat-square&amp;labelColor=0B2540" alt="WeChat PC 4.x">
-    <img src="https://img.shields.io/badge/Windows-10+-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=windows&amp;logoColor=white" alt="Windows 10+">
+    <img src="https://img.shields.io/badge/Windows-10%2F11%20%7C%20Server%202019-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=windows&amp;logoColor=white" alt="Windows 10, 11, Server 2019">
     <img src="https://img.shields.io/badge/Python-3.11%2B-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=python&amp;logoColor=white" alt="Python 3.11+">
     <img src="https://img.shields.io/badge/OCR-RapidOCR-7FD4FF?style=flat-square&amp;labelColor=0B2540" alt="RapidOCR">
     <img src="https://img.shields.io/badge/License-MIT-35C48D?style=flat-square&amp;labelColor=0B2540" alt="MIT License">
@@ -16,20 +16,84 @@
 
 支持两种服务端连接目标：
 
-- **core**：支持 Connector 1.0 协议的消息服务端，默认地址为 `ws://127.0.0.1:8000/api/v1/connector/ws`。
+- **core**：支持 Connector 1.0 协议的消息服务端，默认地址为 `ws://127.0.0.1:8000/api/v1/connector/ws`。仅是支持，未完整功能覆盖。
 - **AstrBot**：运行 `astrbot_plugin_txrui` 插件的 AstrBot 实例，默认地址为 `ws://127.0.0.1:8788`。
 
 客户端通过网络协议与服务端交互，无需导入服务端 Python 模块。这里的“账号标识”和“连接器标识”是协议配置字段，不代表客户端能够读取微信内部账号或消息数据库。
 
+
+## 版本历史
+
+### v0.0.5 - 优化 Windows10 系统上运行（验证阶段）
+- **其他操作系统**：Windows Server 2019 未测试，Windows 10 验证阶段，在 Windows 11 系统开发。
+- **优化DPI**：优化缩放档位
+- **系统兼容性**：Windows Server 2019 还需要测试
+- **优化对接插件**：全面调整对接到`astrbot_plugin_txrui`插件
+- **优化图片文本**：图片、文本发送接收优化，验证“昵称＋图片”和“昵称＋文本”分别生成一条消息
+
+### v0.0.4 - 增加多系统支持（测试阶段）
+- **系统兼容性**：扩展 Windows Server 2019 支持（需安装"桌面体验"），验证 Windows 10/11 兼容性
+- **部署优化**：增强远程桌面环境适配，添加 Server 2019 部署检查清单和会话保持说明
+- **构建改进**：完善 PyInstaller EXE 打包流程，自动生成品牌图标（ICO），优化依赖库打包
+- **文档增强**：补充 Server 2019 运行要求、WebView2 回退方案、防火墙配置和权限说明
+- **可靠性提升**：添加 `--self-test` 参数用于成品自检，验证桌面预检和关键 DLL 完整性
+- **错误诊断**：增强黑图诊断、图形会话检测和 GPU/远程桌面限制问题排查
+
+⚠️ **Windows Server 2019 注意事项**：
+- 不支持 Server Core，必须安装"桌面体验"
+- 需要已登录的交互式桌面会话和微信窗口（不能只存在于后台服务会话）
+- 远程桌面断开前应保持用户会话，不要注销或切换到无桌面服务会话
+- 需安装 .NET Framework 4.6.2+、WebView2 Evergreen Runtime（x64）
+- 锁屏、会话切换或 GPU 限制可能导致 PrintWindow 返回黑图
+
+### v0.0.3 - 优化客户端
+- **性能优化**：改进窗口截图流程，优化 OCR 调用频率和批处理逻辑
+- **媒体增强**：完善媒体气泡检测算法（图片/文件/视频/表情/语音），改进文件名提取和路径定位
+- **用户体验**：优化控制台界面布局，增强实时状态展示和日志输出格式
+- **稳定性改进**：增强异常处理和错误恢复机制，改进窗口句柄失效检测
+- **配置管理**：优化环境变量和配置文件读取优先级，支持更多配置热更新
+- **视觉调参**：扩展可调视觉参数（语音条尺寸、气泡检测阈值、OCR 区域等）
+
+### v0.0.2 - 修复 Bug
+- **核心修复**：修复会话切换逻辑错误、消息识别偏移和 OCR 结果解析问题
+- **媒体处理**：修复图片查看器窗口识别失败、剪贴板复制超时和文件查找路径错误
+- **连接稳定**：改进 WebSocket 重连机制、心跳超时处理和断线恢复逻辑
+- **去重优化**：修复消息指纹计算不准确、时间窗口去重失效和序列号判断错误
+- **日志改进**：完善错误日志记录格式、调试信息输出层级和异常堆栈捕获
+- **兼容性**：修复不同 DPI 缩放下的坐标转换问题和区域定位偏移
+
+### v0.0.1 - 项目创建
+- **核心架构**：建立基于 Win32 PrintWindow API 的微信窗口无侵入截图框架
+- **OCR 集成**：集成 RapidOCR-ONNX 实现高速文本消息识别，支持多行消息解析
+- **消息收发**：实现文本消息实时采集和基于系统剪贴板的文本发送功能
+- **协议实现**：支持 Connector 1.0 标准协议和 AstrBot 专用连接模式，WebSocket 长连接通信
+- **视觉标定**：提供区域自动检测（基于控件识别）和手动标定工具，支持多 DPI 缩放适配
+- **控制台界面**：实现基于 pywebview 的本地网页控制台，集成系统托盘和后台运行支持
+- **会话过滤**：内置系统会话（文件传输助手、微信团队）和公众号消息过滤规则
+- **媒体支持**：基础图片、文件、表情检测能力，支持剪贴板图片复制和文件路径查找
+- **语音功能**：集成 VB-CABLE 虚拟声卡语音发送通道，支持真实语音消息发送（可选依赖）
+- **配置系统**：TOML 配置文件和环境变量覆盖机制，支持运行时参数动态调整
+- **消息去重**：时间窗口 + 内容指纹双重去重机制，避免重复消息上报
+- **多屏支持**：支持多显示器环境，自动处理物理坐标和屏幕 DPI 差异
+
+
 ## 运行要求
 
-- Windows 桌面环境，Python 3.11 或更高版本。
+- Windows 10/11 或 Windows Server 2019（必须安装“桌面体验”并使用已登录的交互式桌面会话），Python 3.11 或更高版本。
+- Windows Server 2019 不支持 Server Core 运行本项目；微信视觉采集依赖窗口、桌面截图、鼠标键盘和系统剪贴板。通过远程桌面连接时，断开前应保持该用户的交互式会话，不要注销或切换到无桌面服务会话。
 - 微信 PC 客户端已登录，主窗口可被识别和操作。
 - 可连接的 core 或 AstrBot 服务端，以及对应连接令牌。
-- 桌面窗口依赖 pywebview；Windows 上通常还需要可用的 WebView2 运行环境。缺少 pywebview 时程序保留本地 HTTP 服务，可使用浏览器访问。
+- 桌面窗口依赖 pywebview；Windows 上通常还需要可用的 WebView2 运行环境。可用 `--browser` 跳过内嵌窗口，改用服务器上已安装的系统浏览器；桌面窗口初始化失败时也会自动回退。
 - 首次使用 OCR 时，需要确保 RapidOCR 的模型资源可用。
 
 本项目会操作真实微信窗口并使用系统剪贴板。建议在专用桌面环境运行，避免采集和发送期间手动切换会话、移动窗口或覆盖剪贴板。
+
+### Windows Server 2019 部署检查
+
+1. 安装带“桌面体验”的 Windows Server 2019，不使用 Server Core；以普通用户登录图形桌面，并在该会话中启动微信。微信窗口不能只存在于后台服务会话。
+2. 若使用内嵌控制台，安装与系统位数一致的 Microsoft Edge WebView2 Evergreen Runtime。服务器没有 WebView2 或策略禁止嵌入式浏览器时，直接使用 `python run.py --browser` 或 `txrui.exe --browser`；该模式需要服务器已有现代浏览器。
+3. 通过远程桌面部署时，断开连接前保持用户会话而不是注销。服务器策略、锁屏、会话切换或 GPU/远程桌面图形限制可能导致微信 `PrintWindow` 返回黑图；出现此情况应在同一个交互式桌面会话中重新登录并检查调试截图。
+4. 为程序目录授予运行用户写权限，至少允许创建 `config.toml`、`regions.json` 和 `logs`。防火墙只需放行客户端到消息服务端的出站连接；本地控制台默认只监听 `127.0.0.1`。
 
 ## 快速启动
 
@@ -58,18 +122,20 @@ python run.py
 ```bat
 python run.py
 python run.py --debug
+python run.py --browser
 python run.py --headless
 ```
 
 - 默认模式提供桌面控制台和托盘。关闭桌面窗口会隐藏到托盘，托盘“退出”菜单用于结束运行。
 - `--debug` 为桌面网页窗口开启开发者工具。
+- `--browser` 使用系统浏览器打开本地控制台，不依赖 WebView2；关闭浏览器标签页不会退出后台进程，源码运行时可在终端按 Ctrl+C 退出，EXE 运行时需在任务管理器结束对应进程。此参数与 `--headless` 互斥。
 - `--headless` 直接启动采集和 WebSocket 连接，不提供控制台，但仍然依赖已登录的 Windows 桌面和微信窗口。
 
 **无界面模式的发送能力与控制台模式不同**：当前 `run.py` 仅为无界面模式绑定文本发送回调；控制台模式使用 `Runtime`，另行绑定媒体发送回调和会话复验逻辑。需要媒体下行时使用默认模式，并先进行实际收发测试。
 
 ## Windows EXE 启动器
 
-构建好的启动器位于 `dist\txrui\txrui.exe`。双击即可打开控制台，目标电脑无需安装 Python，但仍需要 Windows 桌面、微信和 Microsoft Edge WebView2 运行环境。
+构建好的启动器位于 `dist\txrui\txrui.exe`。双击即可打开控制台，目标电脑无需安装 Python；Windows 10/11 和 Windows Server 2019（x64）需要已登录的交互式桌面、微信、.NET Framework 4.6.2 或更高版本，以及 Microsoft Edge WebView2 Evergreen Runtime（x64）。Server 2019 还须安装“桌面体验”。如果没有 WebView2，程序会回退到系统浏览器，也可显式使用 `txrui.exe --browser`。
 
 请复制或分发**整个 `dist\txrui` 目录**，包括 `_internal` 子目录，不能只复制 EXE。建议放在当前用户有写入权限的目录，不要放在 `Program Files` 下。
 
@@ -78,19 +144,37 @@ python run.py --headless
 - 视觉标定保存为 EXE 同目录的 `regions.json`；运行日志位于 `logs\txrui.log`。
 - 默认关闭窗口后隐藏到托盘，使用托盘菜单“退出”结束程序。
 - 支持 `txrui.exe --debug` 和 `txrui.exe --headless`；无界面模式日志同样写入 `logs`。
-- `txrui.exe --self-test` 检查网页资源、配置路径及 OCR 初始化，不操作微信；成功后生成 `self-test.json`，进程返回码为 0。
+- `txrui.exe --self-test` 检查网页资源、配置路径、OCR 初始化，并实际加载 Python.NET、WinForms 和 WebView2 桥接；不创建控制台窗口、不操作微信。成功后生成 `self-test.json`，进程返回码为 0。此检查仍不能替代目标机上的真实窗口打开测试。
 - 升级时保留自己的 `config.toml` 和 `regions.json`，整体替换程序及 `_internal` 资源。
 
 ### 从源码重新构建
 
-在 Windows、Python 3.11+ 环境执行：
+建议使用 Windows x64、64 位 Python 3.12 和独立虚拟环境构建。分发前分别在 Windows 10、Windows 11、Windows Server 2019 桌面体验环境运行自检和真实窗口验收；在 Windows 11 上构建成功并不等于其他系统已验证。
 
 ```bat
-python -m pip install -r requirements-build.txt
-python build_exe.py
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-build.txt
+build_exe.bat --no-pause
 ```
 
-也可在安装依赖后双击 `build_exe.bat`。构建前会初始化 OCR，并在需要时下载模型；模型、网页及运行依赖一并打包。构建不会复制开发机器的实际令牌和视觉标定。重复构建会清理并覆盖输出目录，自己的配置请另行备份。
+也可双击 `build_exe.bat`，脚本优先选择项目 `.venv` / `venv`。默认清理打包缓存、检查 .NET/WebView2 桥接、初始化 OCR，再生成目录版成品并运行 EXE 自检。只有全部成功后才替换 `dist\txrui`。旧目录连同用户数据保存在 `dist\txrui.previous`；下次构建前需先核对并移走该备份。构建失败会保留临时目录和日志。
+
+- `--no-clean`：允许复用 PyInstaller 缓存。
+- `--no-self-test`：显式跳过动态桌面预检和成品自检，仍检查关键 DLL 是否完整；仅用于排障，分发前必须在目标机补测。
+- `--strict-deps`：将 `pip check` 依赖冲突视为失败。
+- `--no-pause`：放在批处理第一个参数时，结束后不等待按键。
+
+构建不会复制源码目录的真实令牌和视觉标定；升级时仅继承旧成品中的 `config.toml` 和 `regions.json`。请分发整个目录，避免将旧 `_internal` 与新版本混合。
+
+### 目标机出现 Python.Runtime.dll 加载错误
+
+`Failed to resolve Python.Runtime.Loader.Initialize` 表示 .NET 桥接程序集未能加载，可能与 .NET 版本、文件缺失、安全策略或下载文件的网络来源标记有关，并非微信截图失败，也不能只安装 WebView2 就断定已修复。
+
+1. 确认 .NET Framework 至少为 4.6.2（推荐 4.8），安装 x64 WebView2 Evergreen Runtime。原生 Visual C++ 依赖加载失败时还需安装 Microsoft Visual C++ 2015–2022 Redistributable（x64）。这些系统运行环境不会因收集几个 DLL 而自动安装。
+2. 将完整目录解压到有写权限的本地磁盘。对于确认来源可信的下载 ZIP，先在 Windows 文件属性中选择“解除锁定”，再重新解压；已有目录可在确认可信后用 PowerShell 执行 `Get-ChildItem 'C:\path\txrui' -Recurse -File | Unblock-File`。程序不会自动解除安全标记，也不会绕过安全策略。
+3. 在 PowerShell 中执行 `$p = Start-Process '.\txrui.exe' -ArgumentList '--self-test' -PassThru -Wait; $p.ExitCode`，检查 `self-test.json` 和 `logs\txrui.log`。无控制台 EXE 需等待进程结束后再读取报告。
+4. 若内嵌窗口仍不可用，使用 `txrui.exe --browser` 保持控制台服务，并按日志排查；Server Core、未登录或已注销的桌面会话不支持微信视觉操作。
+
 
 ## 配置
 

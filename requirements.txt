@@ -15,3 +15,6 @@ pycaw>=20240210
 # 桌面网页窗口和系统托盘；缺少 pywebview 时可用浏览器访问本地控制台。
 pywebview==6.2.1
 pystray==0.19.5
+# 固定 pywebview 的 Windows .NET 桥接版本，必须与打包自检使用的 DLL 对齐。
+pythonnet==3.2.1
+clr-loader==0.3.1

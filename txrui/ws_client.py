@@ -35,6 +35,7 @@ class TxruiClient:
         self.buffer: collections.deque = collections.deque(maxlen=buffer_size)
         self._send_fn = None
         self._send_media_fn = None
+        self._send_mixed_fn = None
         self._recall_fn = None
         # 按请求标识缓存已完成的下行结果，供后续重复请求复用。
         self._seen_outbound: dict[str, dict] = {}
@@ -62,6 +63,14 @@ class TxruiClient:
         媒体下载和实际发送由钩子负责。
         """
         self._send_media_fn = fn
+
+    def bind_mixed_sender(self, fn):
+        """绑定文本与单张图片合并发送钩子。
+
+        Args:
+            fn: 异步发送函数，参数为账号、会话、文本、图片段和会话类型。
+        """
+        self._send_mixed_fn = fn
 
     def bind_recall(self, fn):
         """保存撤回钩子；当前撤回分派直接调用撤回模块，不使用此钩子。"""
@@ -417,6 +426,28 @@ class TxruiClient:
         if not isinstance(content, list) or not content:
             return {"ok": False, "unknown": False, "platform_message_id": "",
                     "error": "empty_content"}
+        if self._send_mixed_fn is not None:
+            text_parts = []
+            image_segment = None
+            can_merge = True
+            for segment in content:
+                if not isinstance(segment, dict):
+                    can_merge = False
+                    break
+                segment_type = str(segment.get("type", "text") or "text").lower()
+                if segment_type in ("text", "quote", "system") and image_segment is None:
+                    text = str(segment.get("text", "") or "")
+                    if text:
+                        text_parts.append(text)
+                elif segment_type == "image" and image_segment is None:
+                    image_segment = segment
+                else:
+                    can_merge = False
+                    break
+            if can_merge and text_parts and image_segment is not None:
+                return await self._call_mixed_sender(
+                    account_id, chat_id, "".join(text_parts), image_segment, chat_type
+                )
         # _send_fn 绑定的是 (account_id, chat_id, text) -> dict
         # 多段时需要媒体发送能力，用 send_fn 之外的扩展钩子。
         sender_ext = getattr(self, "_send_media_fn", None)
@@ -458,6 +489,23 @@ class TxruiClient:
             return {"ok": False, "unknown": False, "platform_message_id": "",
                     "error": "nothing_to_send"}
         return last
+
+    async def _call_mixed_sender(self, account_id: str, chat_id: str, text: str,
+                                 segment: dict, chat_type: str = "") -> dict:
+        """Call the mixed sender with or without the optional chat type."""
+        fn = self._send_mixed_fn
+        if fn is None:
+            return {"ok": False, "unknown": False, "platform_message_id": "",
+                    "error": "mixed_unsupported:no_mixed_sender"}
+        try:
+            params = inspect.signature(fn).parameters
+        except (TypeError, ValueError):
+            params = {}
+        accepts_type = "chat_type" in params or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+        if accepts_type:
+            return await fn(account_id, chat_id, text, segment, chat_type)
+        return await fn(account_id, chat_id, text, segment)
 
     async def _call_media_sender(self, account_id: str, chat_id: str, seg_type: str,
                                  segment: dict, chat_type: str = "") -> dict:

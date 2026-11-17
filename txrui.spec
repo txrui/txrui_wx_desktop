@@ -8,15 +8,17 @@ datas = [(str(root / "webui"), "webui"),
          (str(root / "config.toml.example"), "."),
          (str(root / "logo.png"), "."),
          (str(root / "logo.ico"), "."),
+         (str(root / "txrui.netfx.config"), "."),
          (str(root / "logo.png"), "webui")]
 binaries = []
 hiddenimports = collect_submodules("txrui") + [
     "webview.platforms.winforms", "webview.platforms.edgechromium",
+    "pythonnet", "clr_loader", "clr_loader.ffi", "clr_loader.netfx",
     "pystray._win32", "win32timezone", "PIL.ImageGrab", "PIL.ImageDraw",
 ]
 # 包含 OCR 模型、ONNX 动态库、WebView2/.NET 桥接及音频依赖数据。
-for package in ("rapidocr", "onnxruntime", "webview", "pystray", "sounddevice",
-                "soundfile", "pycaw"):
+for package in ("rapidocr", "onnxruntime", "webview", "pythonnet", "clr_loader",
+                "cffi", "pystray", "sounddevice", "soundfile", "pycaw"):
     package_datas, package_binaries, package_hidden = collect_all(package)
     datas += package_datas
     binaries += package_binaries

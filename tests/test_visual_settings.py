@@ -4,7 +4,7 @@ import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 import pytest
@@ -98,6 +98,22 @@ def test_input_and_submission_points_support_negative_monitor():
     configure(send_mode="click")
     with patch.dict(sys.modules,{"pyautogui":gui}),pytest.raises(ValueError):
         sender._submit(123)
+
+
+def test_text_and_image_are_submitted_once():
+    configure(send_mode="enter")
+    gui = Mock()
+    clipboard_events = []
+    pyperclip = SimpleNamespace(copy=lambda text: clipboard_events.append(("text", text)))
+    image = io.BytesIO()
+    Image.new("RGB", (2, 2), "red").save(image, format="PNG")
+    with patch.object(sender, "_focus_input", return_value=True), \
+         patch.object(sender, "_submit", side_effect=lambda hwnd: clipboard_events.append(("submit",))), \
+         patch("txrui.media_grab.copy_image_to_clipboard", side_effect=lambda value: clipboard_events.append(("image",)) or True), \
+         patch.dict(sys.modules, {"pyautogui": gui, "pyperclip": pyperclip}):
+        assert sender.send_text_and_image(123, "转发：群 用户 ", image.getvalue())
+    assert clipboard_events == [("text", "转发：群 用户 "), ("image",), ("submit",)]
+    assert gui.hotkey.call_args_list == [call("ctrl", "v"), call("ctrl", "v")]
 
 
 @pytest.mark.skipif(sys.platform!="win32", reason="Windows 语音接口")
