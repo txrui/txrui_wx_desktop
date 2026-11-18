@@ -8,6 +8,7 @@ import time
 _lock = threading.Lock()
 _logs: collections.deque = collections.deque(maxlen=300)
 _events: collections.deque = collections.deque(maxlen=100)
+_down_events: collections.deque = collections.deque(maxlen=100)
 
 state = {
     "running": False,
@@ -56,6 +57,33 @@ def push_event(chat: str, sender: str, text: str, chat_type: str = "") -> None:
 def get_events(n: int = 50) -> list[dict]:
     with _lock:
         return list(_events)[-n:][::-1]
+
+
+def push_down_event(payload: dict) -> None:
+    """记录服务端下发的操作摘要，媒体只记录类型，不保存二进制内容。"""
+    content = payload.get("content") or []
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        text = " ".join(
+            str(segment.get("text") or f"[{segment.get('type', 'text')}]")
+            for segment in content if isinstance(segment, dict)
+        )
+    else:
+        text = ""
+    action = str(payload.get("action") or "message.send")
+    if action != "message.send":
+        text = f"[{action}] " + str(payload.get("text") or payload.get("target_text") or text)
+    with _lock:
+        _down_events.append({"ts": time.strftime("%H:%M:%S"),
+                             "chat": str(payload.get("chat_id") or ""),
+                             "sender": "服务端", "text": (text or "[空内容]")[:160],
+                             "chat_type": str(payload.get("chat_type") or "").lower()})
+
+
+def get_down_events(n: int = 30) -> list[dict]:
+    with _lock:
+        return list(_down_events)[-n:][::-1]
 
 
 def bump(key: str, n: int = 1) -> None:

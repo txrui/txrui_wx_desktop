@@ -3,7 +3,7 @@
   <h1>小瑞 PC微信客户端对接框架</h1>
   <p><sub>靠截图 + OCR</sub></p>
   <p>
-    <img src="https://img.shields.io/badge/version-v0.0.4-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.4">
+    <img src="https://img.shields.io/badge/version-v0.0.6-4FB3FF?style=flat-square&amp;labelColor=0B2540" alt="version v0.0.6">
     <img src="https://img.shields.io/badge/WeChat_PC-4.x-35C48D?style=flat-square&amp;labelColor=0B2540" alt="WeChat PC 4.x">
     <img src="https://img.shields.io/badge/Windows-10%2F11%20%7C%20Server%202019-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=windows&amp;logoColor=white" alt="Windows 10, 11, Server 2019">
     <img src="https://img.shields.io/badge/Python-3.11%2B-4FB3FF?style=flat-square&amp;labelColor=0B2540&amp;logo=python&amp;logoColor=white" alt="Python 3.11+">
@@ -23,6 +23,13 @@
 
 
 ## 版本历史
+
+### v0.0.6 - 修复群名识别与群聊误判（2026-11-18）
+- **群名识别修复**：关闭桌面文字 OCR 的自动方向分类，避免英文群标题被误旋转 180°，造成群名乱码、人数识别失败并被误判为私信。
+- **标题识别优化**：标题裁图放大两倍后识别，保留单字符及独立括号，过滤省略号按钮文字，减少群人数后缀漏识别。
+- **人数信息修复**：规范化会话名去除人数后缀后，仍从采集状态保留群人数，并随群聊事件上报。
+- **系统提示过滤**：过滤“你修改群名为……”及“你将群名修改／更改为……”系统提示，避免作为普通聊天消息上报。
+- **诊断与回归测试**：日志增加标题实际识别结果，新增英文群标题、方向分类关闭、群人数上报和群名修改提示过滤的回归测试。
 
 ### v0.0.5 - 优化 Windows10 系统上运行（验证阶段）
 - **其他操作系统**：Windows Server 2019 未测试，Windows 10 验证阶段，在 Windows 11 系统开发。

@@ -75,7 +75,10 @@ def ocr_image(img, max_w: int = 0, upscale: float = 1.0) -> list[dict]:
     except Exception:
         pass
     try:
-        out = engine(np.array(rgb))
+        # 桌面截图中的文字已经正向；方向分类可能把短英文标题误翻转 180°，
+        # 连带将人数 (4) 识别成 (t)，导致群聊退化为私信。每次显式关闭，
+        # 避免共享引擎的调用参数状态影响后续识别。
+        out = engine(np.array(rgb), use_cls=False)
         txts = out.txts if out.txts is not None else []
         scores = out.scores if out.scores is not None else []
         boxes = out.boxes if out.boxes is not None else []

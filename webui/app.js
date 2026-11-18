@@ -23,7 +23,7 @@ document.querySelectorAll("#tabs button").forEach((b) => {
 
 function eventRow(e) {
   // 正文与群名均来自外部消息，必须转义后再插入页面。
-  return `<div title="${escapeHtml(e.ts || "")}">${chatTypeBadge(e.chat_type)}` +
+  return `<div title="${escapeHtml(e.ts || "")}"><span class="t">${escapeHtml(e.ts || "")}</span>${chatTypeBadge(e.chat_type)}` +
     `<b>${escapeHtml(e.chat || "")}</b> | ${escapeHtml(e.sender || "")}: ${escapeHtml(e.text || "")}</div>`;
 }
 
@@ -55,6 +55,10 @@ async function refresh() {
   $("eventsList").innerHTML = evAll.length
     ? evAll.map(eventRow).join("")
     : "<div>暂无上报</div>";
+  const downEvents = r.down_events || [];
+  $("downEventsList").innerHTML = downEvents.length
+    ? downEvents.map(eventRow).join("")
+    : "<div>暂无下报</div>";
   const bl = r.blocked || [];
   $("blockedList").innerHTML = bl.length
     ? bl.map((x) => `<div><span class="t">[${x[2]}]</span><b>${x[0]}</b> (${x[1]})</div>`).join("")
@@ -122,6 +126,21 @@ async function boot() {
   $("btnTitle").onclick = async () => {
     const r = await callApi("read_title");
     toast(r.ok ? ("标题: " + r.result) : ("失败: " + r.error));
+  };
+  $("btnReconnect").onclick = async () => {
+    const button = $("btnReconnect");
+    button.disabled = true;
+    button.textContent = "重连中…";
+    try {
+      const r = await callApi("runtime_reconnect");
+      toast(r.ok ? (r.msg || "已请求重新连接") : ("重连失败: " + r.error));
+      await refresh();
+    } catch (error) {
+      toast("重连失败: " + error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = "重连 WS";
+    }
   };
   $("btnSave").onclick = async () => {
     const patch = {

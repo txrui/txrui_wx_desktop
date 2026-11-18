@@ -9,7 +9,7 @@
 <body>
 <header class="titlebar">
   <div class="tb-left"><img class="logo" src="logo.png" alt="Txrui" width="38" height="38">
-    <div><div class="tb-name">Txrui v0.0.5</div><div class="tb-sub">微信截图 OCR · 控制面板</div></div>
+    <div><div class="tb-name">Txrui v0.0.6</div><div class="tb-sub">微信截图 OCR · 控制面板</div></div>
   </div>
   <div class="tb-right">
     <span class="pill" id="runPill"><span class="dot"></span><span id="runText">未启动</span></span>
@@ -38,6 +38,7 @@
           <button id="btnStop">停止</button>
           <button id="btnShot">截图测试</button>
           <button id="btnTitle">读当前标题</button>
+          <button id="btnReconnect">重连 WS</button>
         </div>
         <p class="hint">启动流程：填好设置页 Token → 启动采集 → 微信来新消息自动上报 core。截图测试把当前微信窗口存成 png 供排查三区域。</p>
       </div>
@@ -52,7 +53,10 @@
     </div>
   </section>
   <section class="page" data-p="events">
-    <div class="card wide"><h3>上报事件（近 30 条）</h3><div id="eventsList" class="list"></div></div>
+    <div class="grid event-grid">
+      <div class="card"><h3>上报事件（近 30 条）</h3><div id="eventsList" class="list"></div></div>
+      <div class="card"><h3>下报事件（近 30 条）</h3><div id="downEventsList" class="list"></div></div>
+    </div>
   </section>
   <section class="page" data-p="filter">
     <div class="card wide"><h3>过滤规则</h3>

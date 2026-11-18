@@ -36,6 +36,7 @@ class TxruiBridge:
         from .runtime import resolve_ws_target
         ws_url, _, target = resolve_ws_target()
         return {"ok": True, "state": snap, "events": _st.get_events(30),
+                "down_events": _st.get_down_events(30),
                 "blocked": snap.get("blocked_recent", []),
                 "logs": _st.get_logs(120),
                 "config": {"core_ws_url": C.CORE_WS_URL, "connector_id": C.CONNECTOR_ID,
@@ -117,6 +118,12 @@ class TxruiBridge:
                     "msg": "正在停止，等待当前识别或发送操作结束"}
         _st.log("网页控制台：采集已停止")
         return {"ok": True, "stopped": True, "msg": "采集已停止"}
+
+    @_safe
+    def runtime_reconnect(self) -> dict:
+        self.rt.reconnect()
+        _st.log("网页控制台：已请求立即重连 WS")
+        return {"ok": True, "msg": "已请求重新连接，连接状态以握手结果为准"}
 
     @_safe
     def test_shot(self) -> dict:

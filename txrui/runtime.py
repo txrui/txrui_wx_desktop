@@ -424,6 +424,15 @@ class Runtime:
                                        name="txrui-runtime")
         self.thread.start()
 
+    def reconnect(self) -> None:
+        """只重建 WS 连接，保留采集任务、事件队列和下行去重缓存。"""
+        loop = self.loop
+        if (self.client is None or loop is None or not loop.is_running()
+                or self.stop_event.is_set() or self.thread is None
+                or not self.thread.is_alive()):
+            raise RuntimeError("采集未启动或正在停止，请先启动采集")
+        loop.call_soon_threadsafe(self.client.request_reconnect)
+
     def stop(self) -> bool:
         self.stop_event.set()
         loop = self.loop

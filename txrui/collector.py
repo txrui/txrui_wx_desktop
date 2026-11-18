@@ -223,6 +223,9 @@ async def poll_once(backend, client, account_id: str, dedup: OcrDedup,
         # 偶发带人数/空格导致群聊被误判为私信。
         if getattr(backend, "_current_is_group", False):
             is_group = True
+            # backend 保存的是已去人数后缀的名称，重新 parse 无法恢复人数。
+            if member_count is None:
+                member_count = getattr(backend, "_current_member_count", None)
         # 会话类型（私信/群聊）统一走 detect_chat_type：入站 payload 与
         # 发送侧共用同一口径，避免两边判法不一致。
         det = detect_chat_type(raw_title or chat, is_group=is_group,

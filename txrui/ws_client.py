@@ -52,6 +52,7 @@ class TxruiClient:
         self._media_pending: dict[str, asyncio.Future] = {}
         self._ws = None
         self._media_seq = 0
+        self._reconnect_event = asyncio.Event()
 
     def bind_sender(self, fn):
         self._send_fn = fn
@@ -242,7 +243,27 @@ class TxruiClient:
                     pass
                 await asyncio.sleep(0.5)
 
+    def request_reconnect(self) -> None:
+        """在客户端所属事件循环内调用，打断连接、握手或退避等待。"""
+        self._reconnect_event.set()
+
     async def run_forever(self, stop_event=None) -> None:
+        while stop_event is None or not stop_event.is_set():
+            self._reconnect_event.clear()
+            connection = asyncio.create_task(self._run_connection(stop_event))
+            reconnect = asyncio.create_task(self._reconnect_event.wait())
+            try:
+                done, _ = await asyncio.wait(
+                    (connection, reconnect), return_when=asyncio.FIRST_COMPLETED)
+                if connection in done:
+                    await connection
+                    return
+            finally:
+                connection.cancel()
+                reconnect.cancel()
+                await asyncio.gather(connection, reconnect, return_exceptions=True)
+
+    async def _run_connection(self, stop_event=None) -> None:
         from . import state as _st
         backoff = 2
         while True:
@@ -275,10 +296,13 @@ class TxruiClient:
                             handlers.add(task)
                             task.add_done_callback(handlers.discard)
                     finally:
-                        for task in list(handlers):
+                        pending_handlers = list(handlers)
+                        for task in pending_handlers:
                             task.cancel()
                         hb.cancel()
                         sender.cancel()
+                        await asyncio.gather(hb, sender, *pending_handlers,
+                                             return_exceptions=True)
                         self._ws = None
                         # 断线时把未决的上传回执全部判失败，调用方降级为占位
                         for fut in list(self._media_pending.values()):
@@ -345,6 +369,8 @@ class TxruiClient:
                                        **self._seen_outbound[rid]})
             return
         payload = msg.get("payload", {})
+        from . import state as _st
+        _st.push_down_event(payload)
         action = str(payload.get("action", "message.send") or "message.send")
         if action == "message.recall":
             result = await self._do_recall(payload)

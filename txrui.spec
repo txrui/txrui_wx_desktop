@@ -9,7 +9,11 @@ datas = [(str(root / "webui"), "webui"),
          (str(root / "logo.png"), "."),
          (str(root / "logo.ico"), "."),
          (str(root / "txrui.netfx.config"), "."),
-         (str(root / "logo.png"), "webui")]
+         (str(root / "logo.png"), "webui"),
+         # 中期改进：包含首次运行和环境诊断脚本
+         (str(root / "first_run_setup.ps1"), "."),
+         (str(root / "verify_dotnet.ps1"), "."),
+         (str(root / "README_SETUP.md"), ".")]
 binaries = []
 hiddenimports = collect_submodules("txrui") + [
     "webview.platforms.winforms", "webview.platforms.edgechromium",

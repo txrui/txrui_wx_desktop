@@ -313,7 +313,9 @@ class TxruiBackend:
         box = tuple(round(v * dimension) for v, dimension in
                     zip(self._title_region, (w, h, w, h)))
         crop = shot.crop(box)
-        items = _ocr.ocr_image(crop)
+        # 小字号英文和人数括号在原尺寸下容易混淆；仅放大标题，不增加
+        # 整个消息区的识别开销。OCR 返回的坐标仍对应原裁图。
+        items = _ocr.ocr_image(crop, upscale=2.0)
         try:
             import numpy as _np
             _a = _np.asarray(crop.convert("RGB").convert("L"))
@@ -334,8 +336,10 @@ class TxruiBackend:
         except Exception:
             pass
         texts = [it["text"] for it in sorted(items, key=lambda i: i["x"])
-                 if len(it["text"].strip()) >= 2]
-        return "".join(texts) or None
+                 if it["text"].strip() and it["text"].strip() not in ("...", "…", "···")]
+        title = "".join(texts).strip()
+        logger.info("[标题OCR] 识别结果=%r", title)
+        return title or None
 
     # ---- 消息读取 ----
     def get_messages(self, chat: str | None, limit: int | None = None,
@@ -479,7 +483,10 @@ class TxruiBackend:
         other = [m for m in msgs[last_self + 1:] if m["type"] == "other"]
         # 去掉 TIME/SYSTEM：微信时间行已被正则过滤；系统行（"你已添加"等）按关键词过滤
         out = [m for m in other
-               if not re.search(r"你已添加|对方撤回|加入群聊|系统消息", m["content"])]
+               if not re.search(r"你已添加|对方撤回|加入群聊|系统消息", m["content"])
+               and not re.fullmatch(
+                   r'你(?:修改群名为|将群名(?:修改|更改)为)\s*[“"「『].+[”"」』]',
+                   m["content"])]
 
         # ---- 媒体气泡检测（图片/文件/视频/表情/语音）----
         self._last_region = None

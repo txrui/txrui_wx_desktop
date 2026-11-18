@@ -12,6 +12,10 @@
 .tabs button.active { color:var(--txt); background:var(--card); border-color:var(--line); }
 main { padding:16px 18px; } .page { display:none; } .page.active { display:block; }
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+.event-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+.event-grid .list { max-height:600px; overflow:auto; overflow-wrap:anywhere; }
+button:disabled { opacity:.6; cursor:wait; }
+@media (max-width:640px) { .event-grid { grid-template-columns:minmax(0,1fr); } }
 .card.wide { grid-column:1 / -1; } .card h3 { margin:0 0 10px; font-size:15px; }
 .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; } .err { color:var(--err); }
 .btns { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
